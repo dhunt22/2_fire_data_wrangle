@@ -2,7 +2,13 @@
 title: "Hayman Fire Recovery"
 author: "Matthew Ross"
 date: "10/3/2019"
-output: html_document
+output: html_document:
+  theme: cerulean
+  toc: true
+      toc_float: true
+      toc_depth: 3
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, warning=F,message=F}
@@ -21,14 +27,15 @@ knitr::opts_knit$set(root.dir='..')
 ```{r dataread, warning=F,message=F}
 ####-----Reading in Data and Stacking it ----- ####
 #Reading in files
-files <- list.files('data',full.names=T)
+files <- list.files("data", full.names=T)
+# If run from line, lowest directory: need ../ | If run from console, base directory at .Rproj
 
+paste(files)
 
 #Read in individual data files
 ndmi <- read_csv(files[1]) %>% 
   rename(burned=2,unburned=3) %>%
   mutate(data='ndmi')
-
 
 ndsi <- read_csv(files[2]) %>% 
   rename(burned=2,unburned=3) %>%
@@ -53,9 +60,17 @@ full_long <- rbind(ndvi,ndmi,ndsi) %>%
 
 What is the correlation between NDVI and NDMI? - here I want you to
 convert the full_long dataset in to a wide dataset using the 
-function "spread" and then make a plot that shows the correlation s a
+function "spread" and then make a plot that shows the correlations a
 function of if the site was burned or not (x axis should be ndmi)
 You should exclude winter months and focus on summer months
+
+```{r}
+wide_long <- spread(full_long, key = "data", value = "value") %>% 
+  mutate(month = month(DateTime)) %>% 
+  filter(month %in% c(5:9))
+
+ggplot(wide_long, aes(ndmi, ndvi, color = site)) + geom_point()
+```
 
 
 
@@ -65,6 +80,41 @@ You should exclude winter months and focus on summer months
  snow index) for January - April and average NDVI for June-August?
 In other words, does the previous year's snow cover influence vegetation
  growth for the following summer?
+
+```{r}
+
+
+
+wide_longearly <- spread(full_long, key = "data", value = "value") %>%
+  mutate(month = month(DateTime)) %>%
+  filter(month %in% c(1:4)) %>% 
+  
+
+wide_longlate <- spread(full_long, key = "data", value = "value") %>% 
+  mutate(month = month(DateTime)) %>% 
+  filter(month %in% c(6:8))
+
+
+
+early <- wide_longearly %>% select(DateTime, ndsi) %>% 
+  mutate(observation = 1:n())
+
+late <- wide_long %>% select(DateTime, ndvi) %>% 
+  mutate(observation = 1:n())
+
+total <- full_join(early, late, by = "observation")
+
+# total = merge(early$ndsi, late$ndvi) %>%
+#   rename(ndsi = "x", ndvi = "y")
+
+total_mod <- pivot_longer(total,cols = c(ndsi, ndvi), names_to = "type", values_to = "value")
+
+ggplot(total_mod, aes(observation, value, color = type)) + geom_point()
+
+totaledit <- total %>% na.omit()
+
+cor(totaledit$ndsi, totaledit$ndvi)
+```
 
 
 ## Q3
@@ -88,7 +138,7 @@ What month is the snowiest on average?
 ## Bonus Question: Redo all problems with `spread` and `gather` using modern tidyverse syntax. 
 
 
-## Bonus Question: Use Climage Engine to pull the same data for the assignment, but updated with 2020/2021 data.
+## Bonus Question: Use Climate Engine to pull the same data for the assignment, but updated with 2020/2021 data.
 
 
 
