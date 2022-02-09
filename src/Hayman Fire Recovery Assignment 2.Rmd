@@ -1,12 +1,13 @@
 ---
 title: "Hayman Fire Recovery"
 author: "Matthew Ross"
-date: "10/3/2019"
-output: html_document:
-  theme: cerulean
-  toc: true
-      toc_float: true
-      toc_depth: 3
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    theme: cerulean
+    toc: true
+    toc_float: true
+    toc_depth: 3
 editor_options: 
   chunk_output_type: console
 ---
@@ -82,38 +83,42 @@ In other words, does the previous year's snow cover influence vegetation
  growth for the following summer?
 
 ```{r}
+# Group by year (early NDVI  /  late NDSI). Compare the different years, not months ##Got help with this question on Monday, did not have the chance to complete it (02-07-2022)
 
+# Filter and prepare data to be aggregated by month, year.
 
-
-wide_longearly <- spread(full_long, key = "data", value = "value") %>%
+wide_early_ndsi <- spread(full_long, key = "data", value = "value") %>%
   mutate(month = month(DateTime)) %>%
+  mutate(year = year(DateTime)) %>% 
   filter(month %in% c(1:4)) %>% 
-  
+  select(site, ndsi, month, year) %>% 
+  group_by(month, year)
 
-wide_longlate <- spread(full_long, key = "data", value = "value") %>% 
+wide_late_ndvi <- spread(full_long, key = "data", value = "value") %>% 
   mutate(month = month(DateTime)) %>% 
-  filter(month %in% c(6:8))
+  mutate(year = year(DateTime)) %>% 
+  filter(month %in% c(6:8)) %>% 
+  select(site, ndvi, month, year) %>% 
+  group_by(month, year)
 
+# Aggregate data values for ndsi/ndvi by year
 
+ndsi_yearly <- aggregate(ndsi ~ year, wide_early_ndsi, FUN = mean)
+  
+ndvi_yearly <- aggregate(ndvi ~ year, wide_late_ndvi, FUN = mean)
 
-early <- wide_longearly %>% select(DateTime, ndsi) %>% 
-  mutate(observation = 1:n())
+# Combine data for plotting
 
-late <- wide_long %>% select(DateTime, ndvi) %>% 
-  mutate(observation = 1:n())
+total <- full_join(ndsi_yearly, ndvi_yearly)
 
-total <- full_join(early, late, by = "observation")
+total_mod <- pivot_longer(total, cols = c(ndsi, ndvi), names_to = "type", values_to = "value")
 
-# total = merge(early$ndsi, late$ndvi) %>%
-#   rename(ndsi = "x", ndvi = "y")
+# Plot of the data, color by type (ndvi, ndsi)
 
-total_mod <- pivot_longer(total,cols = c(ndsi, ndvi), names_to = "type", values_to = "value")
+ggplot(total_mod, aes(year, value, color = type)) + geom_point() +
+  scale_x_continuous(n.breaks = 20)
 
-ggplot(total_mod, aes(observation, value, color = type)) + geom_point()
-
-totaledit <- total %>% na.omit()
-
-cor(totaledit$ndsi, totaledit$ndvi)
+cor(total$ndsi, total$ndvi)
 ```
 
 
@@ -122,18 +127,46 @@ cor(totaledit$ndsi, totaledit$ndvi)
 How is the snow effect from question 2 different between pre- and post-burn
 and burned and unburned? 
 
+The burn is 
 
 ## Question 4
 
 What month is the greenest month on average? 
 
+```{r}
 
+# Month with highest NDVI on average, rename months
+
+ndvi_monthly <- aggregate(ndvi ~ month, wide_late_ndvi, FUN = mean) %>% 
+  mutate(month = month(month, label = TRUE, abbr = FALSE))
+
+# Find max index
+max_ndvi <- which.max(ndvi_monthly[,2])
+
+# Print max index month name
+print(paste(ndvi_monthly[max_ndvi,1], "is the greenest month on average."))
+
+```
 
 
 ## Question 5) 
 
 What month is the snowiest on average?
 
+```{r}
+
+# Month with highest NDSI on average, rename months
+
+ndsi_monthly <- aggregate(ndsi ~ month, wide_early_ndsi, FUN = mean) %>% 
+  mutate(month = month(month, label = TRUE, abbr = FALSE))
+
+# Find max index
+max_ndsi <- which.max(ndsi_monthly[,2])
+
+# Print max index month name
+print(paste(ndsi_monthly[max_ndsi,1], "is the snowiest month on average."))
+
+```
 
 ## Bonus Question: Redo all problems with `spread` and `gather` using modern tidyverse syntax. 
 
