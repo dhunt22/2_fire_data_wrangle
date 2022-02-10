@@ -1,6 +1,6 @@
 ---
 title: "Hayman Fire Recovery"
-author: "Matthew Ross"
+author: "Matthew Ross, Devin Hunt"
 date: "`r Sys.Date()`"
 output: 
   html_document:
@@ -103,23 +103,25 @@ wide_late_ndvi <- spread(full_long, key = "data", value = "value") %>%
 
 # Aggregate data values for ndsi/ndvi by year
 
-ndsi_yearly <- aggregate(ndsi ~ year, wide_early_ndsi, FUN = mean)
+ndsi_yearly <- aggregate(ndsi ~ year + site, wide_early_ndsi, FUN = mean)
   
-ndvi_yearly <- aggregate(ndvi ~ year, wide_late_ndvi, FUN = mean)
+ndvi_yearly <- aggregate(ndvi ~ year + site, wide_late_ndvi, FUN = mean)
 
 # Combine data for plotting
 
 total <- full_join(ndsi_yearly, ndvi_yearly)
 
-total_mod <- pivot_longer(total, cols = c(ndsi, ndvi), names_to = "type", values_to = "value")
-
 # Plot of the data, color by type (ndvi, ndsi)
 
-ggplot(total_mod, aes(year, value, color = type)) + geom_point() +
-  scale_x_continuous(n.breaks = 20)
+ggplot() + geom_point(data = filter(total, site == "burned"), aes(year, ndsi, col = "ndsi")) +
+  geom_point(data = filter(total, site == "unburned"), aes(year, ndvi, col = "ndvi")) +
+  scale_x_continuous(n.breaks = 20) + scale_color_manual(values=c("cyan3", "chartreuse4"))
 
 cor(total$ndsi, total$ndvi)
 ```
+
+Snowfall has a weak short-term impact on the later seasons vegetation index. We can see in the graph that years with lower snow indexes over a longer period cause a small change in the NDVI in the future years.
+
 
 
 ## Q3
@@ -127,7 +129,8 @@ cor(total$ndsi, total$ndvi)
 How is the snow effect from question 2 different between pre- and post-burn
 and burned and unburned? 
 
-The burn is 
+
+Significantly lower snow is detected in the initial post-burn area. From the graph, we can see that the index values drop significantly initially, the recover over the course of about 4 years.
 
 ## Question 4
 
